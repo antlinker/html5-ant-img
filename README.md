@@ -9,7 +9,7 @@
             height:150px;
   }
  </style> 
- <link rel="import" href="limg.html" >
+ <link rel="import" href="ant-img.html" >
   .
   .
   .

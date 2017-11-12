@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        ant-img {
+            padding: 0px;
+            margin: 0px;
+            display: inline-block;
+        }
+
+        ant-img::div {
+            position: absolute;
+            display: block;
+            padding:0px;
+            margin:0px;
+        }
+
+        ant-img::shadow img {
+            position: absolute;
+            opacity: 1;
+            transition: opacity 1s;
+        }
+
+        /* ant-img::shadow img.cur {
+            z-index: 2;
+        }
+        ant-img::shadow img.obj {
+            z-index: 1;
+        } */
+    </style>
+</head>
+
+<body>
+    <script>
+        function whichTransitionEvent() {
+            var t,
+                el = document.createElement('surface'),
+                transitions = {
+                    'transition': 'transitionend',
+                    'OTransition': 'oTransitionEnd',
+                    'MozTransition': 'transitionend',
+                    'WebkitTransition': 'webkitTransitionEnd'
+                }
+
+            for (t in transitions) {
+                if (el.style[t] !== undefined) {
+                    return transitions[t];
+                }
+            }
+        }
+
+        var transitionEvent = whichTransitionEvent();
+        function antimg(tag) {
+
+        }
+        antimg.prototype = {
+            objSrc: '',
+            curSrc: '',
+            init: function () {
+
+                this.area = document.createElement("div")
+                this.imgCur = document.createElement('img');
+                this.imgObj = document.createElement('img');
+                this.imgObj.style.opacity = 0;
+                this.imgCur.style.opacity = 1;
+                this.imgCur.style.zIndex = 2;
+                this.imgObj.style.zIndex = 1;
+                this.imgObj.addEventListener("error", this.creErrorFunc())
+                this.imgCur.addEventListener("error", this.creErrorFunc())
+                if (this.width > 0) {
+                    this.area.style.width = this.width + "px";
+                    this.imgObj.style.width = this.width + "px";
+                    this.imgCur.style.width = this.width + "px";
+                }
+                if (this.height > 0) {
+                    this.area.style.height = this.height + "px";
+                    this.imgObj.style.height = this.height + "px";
+                    this.imgCur.style.height = this.height + "px";
+                }
+                if (!!this.alt) {
+                    this.imgCur.alt = this.alt;
+                    this.imgObj.alt = this.alt;
+                }
+
+                this.root.appendChild(this.area)
+                this.area.appendChild(this.imgCur)
+                this.area.appendChild(this.imgObj)
+
+                document.addEventListener("scroll", this.creWatchVisble())
+                window.addEventListener("resize", this.creWatchVisble())
+                var thiz = this;
+                setTimeout(() => {
+                    if (this.isVisble()) {
+                        this.setSrc(this.src);
+                    } else {
+                        this.setSrc(this.def)
+                    }
+                })
+
+            },
+
+            creErrorFunc: function () {
+                return () => this.setSrc(this.err)
+            },
+            isVisble: function () {
+                return isVisble(this.area);
+            },
+            setSrc: function (objsrc) {
+
+                var thiz = this;
+
+                if (this.objsrc !== objsrc) {
+                   // console.log("切换："+objsrc)
+                    this.objsrc = objsrc
+                    if (this.duration == 0) {
+                        this.imgObj.src = objsrc;
+                        this.imgCur.src = objsrc;
+                        return
+                    }
+                    var handle = function () {
+
+                        thiz.hideCurImg.call(thiz);
+                        thiz.showObjectImg.call(thiz);
+                        thiz.imgObj.removeEventListener("load", handle)
+                    }
+                    this.imgObj.addEventListener("load", handle)
+                    this.imgObj.src = objsrc;
+                }
+            },
+            hideCurImg: function () {
+                this.imgCur.style.opacity = 0;
+            },
+            showObjectImg: function () {
+                this.imgObj.style.opacity = 1;
+                var thiz = this;
+                this.transitionEventHandler = function (evt) {
+
+
+                    thiz.imgObj.removeEventListener(transitionEvent, thiz.transitionEventHandler)
+                    thiz.swapImg.call(thiz);
+                }
+                this.imgObj.addEventListener(transitionEvent, thiz.transitionEventHandler)
+
+
+            },
+            swapImg: function () {
+
+                var cur = this.imgCur;
+                this.imgCur = this.imgObj;
+                this.imgObj = cur;
+                this.imgCur.style.zIndex = 2;
+                this.imgObj.style.zIndex = 1;
+
+            },
+            creWatchVisble: function () {
+                return () => {
+                    if (this.isVisble()) {
+                        this.setSrc.call(this, this.src)
+                    } else {
+                        this.setSrc.call(this, this.def)
+                    }
+                }
+            }
+        }
+        var proto2 = Object.create(HTMLElement.prototype);
+        proto2.createdCallback = function () {
+            var ai = new antimg()
+            ai.src = this.getAttribute('src');
+            ai.def = this.getAttribute('def');
+            ai.err = this.getAttribute('err');
+            ai.duration = this.getAttribute('duration');
+            ai.duration = !!!ai.duration ? 0 : ai.duration;
+            ai.width = this.clientWidth ? this.clientWidth : this.offsetWidth;
+            ai.height = this.clientHeight ? this.clientHeight : this.offsetHeight;
+            ai.root = this.createShadowRoot();
+            var alt = this.getAttribute('alt');
+            ai.def = (!!!ai.def) ? imgsrc : ai.def;
+            ai.err = (!!!ai.err) ? ai.def : ai.err;
+            ai.init.apply(ai)
+
+        };
+
+
+        document.registerElement("ant-img", { prototype: proto2 });
+        function isVisble(obj) {
+            return isHvisble(obj) && isWvisble(obj)
+        }
+
+        function isHvisble(obj) {
+
+            var visibleBottom = window.scrollY + document.documentElement.clientHeight;
+
+            var visibleTop = window.scrollY-obj.offsetHeight;
+            var centerY = obj.offsetTop ;
+            if (centerY > visibleTop && centerY < visibleBottom) {
+                return true
+            } else {
+                return false
+            }
+
+        }
+        function isWvisble(obj) {
+
+ 
+            var visibleRight = window.scrollX + document.documentElement.clientWidth;
+            var visibleLeft = window.scrollX-obj.offsetWidth;
+            var centerX = obj.offsetLeft ;
+            if (centerX > visibleLeft && centerX < visibleRight) {
+                return true
+            } else {
+                return false
+            }
+
+        }
+    </script>
+
+</body>
+
+</html>

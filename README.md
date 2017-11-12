@@ -1,6 +1,6 @@
 # html5-ant-img
 
-## 列子
+## 例子
 ```html
 <style>
  ant-img {
